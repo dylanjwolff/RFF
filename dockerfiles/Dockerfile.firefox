@@ -1,0 +1,59 @@
+FROM schedfuzz-base
+
+# mercurial needed for from source
+RUN apt install -y nodejs npm libgtk-3-dev libdbus-glib-1-dev libasound-dev
+
+WORKDIR /opt
+# Firefox takes hours to build... so skip source for now
+# RUN hg clone https://hg.mozilla.org/mozilla-central/ firefox-source
+RUN wget https://ftp.mozilla.org/pub/firefox/releases/103.0b9/linux-x86_64/en-US/firefox-103.0b9.tar.bz2
+RUN bzip2 -d firefox-103.0b9.tar.bz2
+RUN tar -xvf firefox-103.0b9.tar
+# ENV SUT_NAME=firefox-bin
+ENV SUT_NAME=firefox-bin
+ENV UNINST=/opt/firefox/$SUT_NAME
+
+COPY dicts/js.dict .
+ENV DICT=/opt/js.dict
+
+WORKDIR /opt
+RUN wget https://plg.uwaterloo.ca/~dynjs/jsbench/suite/jsbench-2013.1.tar.gz
+RUN tar -zxvf jsbench-2013.1.tar.gz
+RUN mkdir tmp 
+RUN cp jsbench-2013.1/google/firefox/*.js tmp/google.js
+RUN cp jsbench-2013.1/amazon/firefox/*.js tmp/amazon.js
+RUN cp jsbench-2013.1/twitter/firefox/*.js tmp/twitter.js
+RUN cp jsbench-2013.1/facebook/firefox/*.js tmp/facebook.js
+RUN cp jsbench-2013.1/yahoo/firefox/*.js tmp/yahoo.js
+RUN mkdir afl-testcases
+WORKDIR /opt/afl-testcases
+RUN npm install uglify-js -g
+# RUN uglifyjs --compress --mangle -- ../tmp/google.js > google.min.js
+# RUN uglifyjs --compress --mangle -- ../tmp/amazon.js > amazon.min.js
+# RUN uglifyjs --compress --mangle -- ../tmp/facebook.js > facebook.min.js
+RUN uglifyjs --compress --mangle -- ../tmp/twitter.js > twitter.min.js
+# RUN uglifyjs --compress --mangle -- ../tmp/yahoo.js > yahoo.min.js
+ENV INPUTS=/opt/afl-testcases
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+RUN echo '<title></title></head><body><script type="text/javascript" src="script.js"></script></body></html>' > shim.html
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -f script.js -x $DICT -- timeout 1s ./$SUT_NAME.afl -headless shim.html
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

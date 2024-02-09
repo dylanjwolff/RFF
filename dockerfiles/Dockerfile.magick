@@ -1,0 +1,50 @@
+FROM schedfuzz-base
+
+# ImageMagick specifics -- should split into separate file
+RUN apt install -y libpng-dev librsvg2-dev libjpeg-dev libwebp-dev libtiff-dev
+WORKDIR /opt
+RUN git clone https://github.com/ImageMagick/ImageMagick.git
+WORKDIR /opt/ImageMagick
+RUN mkdir build
+RUN ./configure --disable-shared --prefix=/opt/ImageMagick/build
+RUN make -j $(nproc)
+RUN make install
+ENV UNINST=/opt/ImageMagick/build/bin/magick
+
+RUN mkdir afl_testcases; cd afl_testcases; wget https://lcamtuf.coredump.cx/afl/demo/afl_testcases.tgz; tar -zxvf afl_testcases.tgz
+ENV INPUTS=/opt/ImageMagick/afl_testcases/png/edges-only/images
+ENV SUT_NAME=magick
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+# run (target specific)
+
+# large testcases time out
+RUN cd $INPUTS; ls -lh | grep K | sed "s/.* //" | xargs rm
+RUN cd $INPUTS; rm id:000210*
+# files that exhibit threading
+# id:002295,src:002290,op:flip1,pos:192.png  id:002297,src:002294,op:havoc,rep:4.png  id:003456,src:001794+002899,op:splice,rep:2.png  id:003803,src:002377+003648,op:splice,rep:64.png
+RUN mkdir threaded_testcases; mv $INPUTS/id:002295* $INPUTS/id:002297*  $INPUTS/id:003456*  $INPUTS/id:003803* threaded_testcases
+ENV INPUTS=/opt/sched-fuzz/threaded_testcases
+
+
+# ImageMagick gaussian blur png
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl convert @@ -gaussian-blur 0x1 -strip -define png:ignore-crc=true -
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

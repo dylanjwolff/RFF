@@ -1,0 +1,55 @@
+FROM schedfuzz-base
+
+RUN apt install -y build-essential \
+      libpcre2-dev \
+      gfortran \
+      libgfortran5 \
+      ca-certificates \
+      cmake \
+      zlib1g-dev \
+      libpng-dev \
+      libfile-slurp-perl
+WORKDIR /opt
+RUN git clone https://github.com/sib-swiss/pftools3.git
+
+WORKDIR /opt/pftools3
+RUN mkdir build
+WORKDIR /opt/pftools3/build
+RUN cmake .. -DCMAKE_INSTALL_PREFIX:PATH=$PFTOOLS_PATH -DCMAKE_BUILD_TYPE=Release -DUSE_GRAPHICS=OFF -DUSE_PDF=ON
+RUN make -j $(nproc)
+ENV SUT_NAME=pfscanV3
+# ENV SUT_NAME=pfsearchV3
+ENV UNINST=/opt/pftools3/build/src/C/$SUT_NAME
+
+
+WORKDIR /opt
+RUN mkdir prf
+RUN mkdir seq
+RUN cp /opt/pftools3/tests/examples/*.prf prf
+RUN cp /opt/pftools3/tests/examples/*.seq seq
+# ENV INPUTS=/opt/seq
+ENV INPUTS=/opt/prf
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+# see the script in /opt/pftools/tests/examples/*.sh.cmake for usage details
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl -f @@ /opt/seq/all.seq
+# CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl -f /opt/seq/all.prf @@
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

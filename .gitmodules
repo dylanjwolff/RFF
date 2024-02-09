@@ -1,0 +1,6 @@
+[submodule "rr-sched-control"]
+	path = rr-sched-control
+	url = git@github.com:dylanjwolff/rr-sched-control.git
+[submodule "SHB-fuzz"]
+	path = SHB-fuzz
+	url = https://github.com/zhengshi1998/SHB-fuzz.git

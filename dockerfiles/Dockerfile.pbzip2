@@ -1,0 +1,42 @@
+FROM schedfuzz-base
+
+RUN apt install -y bzr libbz2-dev
+# ImageMagick specifics -- should split into separate file
+WORKDIR /opt
+RUN bzr branch lp:pbzip2
+RUN cd pbzip2; make -j $(nproc)
+ENV UNINST=/opt/pbzip2/pbzip2
+
+RUN mkdir afl_testcases; cd afl_testcases; wget https://lcamtuf.coredump.cx/afl/demo/afl_testcases.tgz; tar -zxvf afl_testcases.tgz
+ENV INPUTS=/opt/afl_testcases/png/edges-only/images
+ENV SUT_NAME=pbzip2
+
+
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+ENV LOG_DIR_MAP=/opt/out/trace_map.std
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FFF
+ENV DET_COV=1
+
+# run (target specific)
+
+# compress
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl -p4 -z @@ --stdout
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

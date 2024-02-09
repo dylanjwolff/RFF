@@ -1,0 +1,49 @@
+FROM schedfuzz-base
+
+# x264 specifics -- should split into separate file
+WORKDIR /opt
+RUN apt install nasm
+RUN git clone https://github.com/mirror/x264.git
+WORKDIR /opt/x264
+RUN ./configure
+RUN make -j $(nproc)
+ENV UNINST=/opt/x264/x264
+
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+ENV LOG_DIR_MAP=/opt/out/trace_map.std
+
+# Alternative source of seeds... issue with resolution
+# RUN git clone https://github.com/strongcourage/fuzzing-corpus.git afl_testcases
+COPY seeds/avi afl_testcases
+ENV INPUTS=/opt/x264/afl_testcases/
+
+ENV SUT_NAME=x264
+ #----------------- 
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+# only takes 1st arg, so i.e. a random input
+ENV ARGS=" @@ --input-res 640x360 --fps 30 -o -"
+RUN python3 ./dynamic-pp.py $INPUTS/*
+COPY out.csv /opt/out
+
+## run (target specific)
+
+# x264
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl @@ --input-res 640x360 --fps 30 -o -
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

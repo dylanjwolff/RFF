@@ -1,0 +1,42 @@
+FROM schedfuzz-base
+
+
+# build / install target
+WORKDIR /opt/sched-fuzz
+
+RUN apt install -y python2
+RUN apt-get install gcc-multilib -y
+RUN apt-get install libnspr4 -y
+RUN git clone https://github.com/mc-imperial/sctbench.git
+
+WORKDIR sctbench/benchmarks
+RUN sed -i 's/\/usr\/bin\/env python/\/usr\/bin\/python2/g' **/*.py
+RUN cd parsec-2.0; grep -rl "HUGE" pkgs/apps/ferret | xargs sed -i "s/HUGE/DBL_MAX/g"
+
+WORKDIR ..
+ENV ROOT=/opt/sched-fuzz/sctbench
+RUN ./scripts/build_benchmarks
+
+ENV INPUTS=/opt/sched-fuzz/input
+
+ENV MASK=0x1
+ENV DET_COV=1
+
+WORKDIR /opt/sched-fuzz
+
+RUN git clone https://github.com/google/AFL.git
+# Stop AFL from exiting if the initial test-case crashes
+RUN cd AFL; sed -i 's/  FATAL("Test case .* crash.*//' afl-fuzz.c; make
+
+COPY scripts/sctbench-scripts/buildBugX.sh buildBugX.sh
+RUN chmod 777 buildBugX.sh
+RUN ./buildBugX.sh
+
+COPY scripts/sctbench-scripts/all.py all.py
+# run (target specific)
+CMD python3 all.py
+
+# docker run -t -v $(pwd)/out:/opt/out fuzz-sum
+# docker run -it -v $(pwd)/out:/opt/out fuzz-sum /bin/bash
+
+

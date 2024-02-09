@@ -1,0 +1,42 @@
+FROM schedfuzz-base
+
+RUN apt install -y libbz2-dev gnulib
+
+WORKDIR /opt
+RUN git clone https://github.com/kjn/lbzip2.git
+
+WORKDIR /opt/lbzip2
+RUN ./build-aux/autogen.sh
+RUN ./configure --disable-shared
+RUN make -j $(nproc)
+ENV SUT_NAME=lbzip2
+ENV UNINST=/opt/lbzip2/src/$SUT_NAME
+
+WORKDIR /opt
+RUN mkdir afl_testcases; cd afl_testcases; wget https://lcamtuf.coredump.cx/afl/demo/afl_testcases.tgz; tar -zxvf afl_testcases.tgz
+ENV INPUTS=/opt/afl_testcases/png/edges-only/images
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FFF
+ENV DET_COV=1
+
+# run (target specific)
+
+# compress
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl -n 4 -k --stdout @@
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

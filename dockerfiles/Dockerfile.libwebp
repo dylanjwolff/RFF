@@ -1,0 +1,53 @@
+FROM schedfuzz-base
+
+RUN apt update -y
+RUN apt install -y libpng-dev librsvg2-dev libjpeg-dev libwebp-dev libtiff-dev
+# ImageMagick specifics -- should split into separate file
+WORKDIR /opt
+RUN git clone https://github.com/webmproject/libwebp.git
+WORKDIR /opt/libwebp
+RUN mkdir build
+ENV CFLAGS=-g
+ENV CXXFLAGS=-g
+RUN ./autogen.sh
+RUN ./configure --disable-shared --prefix=/opt/libwebp/build
+RUN make -j $(nproc); make install
+ENV SUT_NAME=cwebp
+# ENV SUT_NAME=dwebp
+ENV PROJ_NAME=libwebp
+ENV UNINST=/opt/libwebp/build/bin/$SUT_NAME
+
+WORKDIR /opt
+RUN mkdir afl_testcases; cd afl_testcases; wget https://lcamtuf.coredump.cx/afl/demo/afl_testcases.tgz; tar -zxvf afl_testcases.tgz
+ENV INPUTS=/opt/afl_testcases/png/edges-only/images
+
+RUN mkdir threaded_testcases; cd threaded_testcases; wget https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png
+ENV INPUTS=/opt/threaded_testcases
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+## run (target specific)
+
+ENV ARGS=" @@ -mt -quiet -metadata all -o -"
+# only takes 1st arg, so i.e. a random input
+# RUN python3 ./dynamic-pp.py $INPUTS/*
+# COPY out.csv /opt/out
+
+RUN cp threading_events/$PROJ_NAME/$SUT_NAME/out.csv .
+RUN ./selective-instrument.sh $UNINST out.csv
+
+# compress
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl @@ -mt -quiet -metadata all -o -
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

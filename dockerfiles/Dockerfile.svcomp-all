@@ -1,0 +1,29 @@
+FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update -y
+RUN apt upgrade -y
+RUN apt install -y git
+RUN git clone https://gitlab.com/sosy-lab/benchmarking/sv-benchmarks.git
+
+FROM schedfuzz-base
+WORKDIR /opt
+RUN mkdir -p svcomp
+WORKDIR /opt/svcomp
+
+
+RUN mkdir -p sv-benchmarks/c
+COPY --from=0 sv-benchmarks/c/ sv-benchmarks/c
+WORKDIR /opt/svcomp/sv-benchmarks/c
+COPY scripts/svcomp/* ./
+RUN python3 process-dirs.py /opt/sched-fuzz/working-execs
+
+WORKDIR /opt/sched-fuzz
+RUN git clone https://github.com/google/AFL.git
+# Stop AFL from exiting if the initial test-case crashes
+RUN cd AFL; sed -i 's/  FATAL("Test case .* crash.*//' afl-fuzz.c; make
+
+RUN cp /opt/svcomp/sv-benchmarks/c/exec-all.py .
+COPY scripts/svcomp/svcomp-fuzz-all.py ./
+CMD python3 svcomp-fuzz-all.py
+
+

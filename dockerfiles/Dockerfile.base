@@ -1,0 +1,59 @@
+FROM ubuntu:20.04
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update -y
+RUN apt upgrade -y
+RUN apt-get update -y
+RUN apt install -y git curl wget unzip gcc g++ clang make xxd autoconf automake autotools-dev libtool pkg-config fakeroot libtinfo5 
+# temporary, can remove once we have race pred
+RUN apt install -y python 
+RUN apt-get install -y vim
+
+RUN wget https://download.java.net/java/GA/jdk19.0.2/fdb695a9d9064ad6b064dc6df578380c/7/GPL/openjdk-19.0.2_linux-x64_bin.tar.gz
+RUN tar -xvf openjdk-19.0.2_linux-x64_bin.tar.gz
+ENV PATH=$PATH:/jdk-19.0.2/bin
+RUN java --version
+
+WORKDIR /opt
+# install zig
+ENV ZIG_DIR=zig-linux-x86_64-0.11.0
+RUN wget https://ziglang.org/builds/$ZIG_DIR.tar.xz
+RUN tar -xvf zig-linux*
+ENV PATH=$PATH:/opt/$ZIG_DIR
+RUN zig zen
+
+# install e9afl
+RUN git clone https://github.com/GJDuck/e9afl/
+RUN cd e9afl; git checkout 4eb2df2f20fafd67ea218cbc4b00bb33bc6834cd
+ENV E9PATCH_VERSION=edd845be76d2233b6060186ce59544ff07f2d836
+RUN sed -i 's/^VERSION=.*/VERSION=\$E9PATCH_VERSION/g' ./e9afl/build.sh
+
+WORKDIR /opt/e9afl
+RUN ./build.sh
+RUN ./install.sh
+RUN dpkg -i e9afl_0.9.0_amd64.deb
+
+RUN ln -s /opt/e9afl/e9patch-$E9PATCH_VERSION/e9compile.sh /usr/bin/e9compile
+
+WORKDIR /opt
+COPY sched-fuzz sched-fuzz
+COPY threading_events sched-fuzz/threading_events
+COPY scripts/dynamic-pp.py sched-fuzz
+
+COPY race_predictor race_predictor
+
+WORKDIR /opt/sched-fuzz
+RUN git clone https://github.com/dylanjwolff/line2addr
+RUN rm -f stdlib.c 
+RUN cp -s /opt/e9afl/e9patch-$E9PATCH_VERSION/examples/stdlib.c .
+RUN e9compile stdlib.c
+RUN zig test -lc -I . hm-tests.zig
+RUN e9compile sched.c -msse4.2
+RUN cd AFL-2.57b; zig test mutator.zig -lc
+RUN cd AFL-2.57b; make clean; CC="zig cc" make
+RUN clang++ -std=c++17 -O2 -fPIC -shared -I include -o libsched.so libsched.cpp -ldl -pthread -msse4.2
+
+RUN mkdir -p /opt/out
+
+

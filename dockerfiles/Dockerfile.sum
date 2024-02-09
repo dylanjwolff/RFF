@@ -1,0 +1,26 @@
+FROM schedfuzz-base
+
+# build / install target
+WORKDIR /opt/sched-fuzz
+RUN cd test; make
+ENV UNINST=/opt/sched-fuzz/test/sum
+ENV SUT_NAME=sum
+ENV INPUTS=/opt/sched-fuzz/input
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+
+RUN mkdir -p $INPUTS
+RUN echo "hi" >  $INPUTS/test.txt
+# e9afl instrument
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+ENV MASK=0x3
+ENV DET_COV=1
+
+ENV TIME_BUDGET=15m
+# run (target specific)
+CMD timeout $TIME_BUDGET ./fuzz.sh -i $INPUTS -o /opt/out -d -- ./$SUT_NAME.afl @@
+
+# docker run -t -v $(pwd)/out:/opt/out fuzz-sum
+# docker run -it -v $(pwd)/out:/opt/out fuzz-sum /bin/bash
+

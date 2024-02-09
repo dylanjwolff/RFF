@@ -1,0 +1,39 @@
+FROM schedfuzz-base
+
+RUN apt install -y yasm nasm
+WORKDIR /opt
+RUN git clone https://github.com/FFmpeg/FFmpeg.git
+WORKDIR /opt/FFmpeg
+RUN ./configure --disable-shared
+RUN make -j $(nproc)
+ENV SUT_NAME=ffmpeg
+ENV UNINST=/opt/FFmpeg/$SUT_NAME
+
+COPY seeds/avi /opt/afl-testcases
+ENV INPUTS=/opt/afl-testcases
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FFF
+ENV DET_COV=1
+
+# run (target specific)
+
+# encode
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 68000 -- ./$SUT_NAME.afl @@ -w 640 -h 360 --threads=4 -o dest.vpx
+
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

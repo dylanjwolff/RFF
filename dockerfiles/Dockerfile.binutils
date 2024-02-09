@@ -1,0 +1,44 @@
+FROM schedfuzz-base
+
+RUN apt install -y bison flex texinfo help2man expat libgmp-dev
+WORKDIR /opt
+RUN git clone git://sourceware.org/git/binutils-gdb.git
+
+WORKDIR /opt/binutils-gdb
+RUN ./configure --disable-shared
+RUN make -j $(nproc)
+
+WORKDIR /opt/binutils-gdb/gold
+RUN ./configure --disable-shared
+RUN make -j $(nproc)
+ENV SUT_NAME=ld-new
+ENV UNINST=/opt/binutils-gdb/gold/$SUT_NAME
+
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+# run (target specific)
+
+RUN mkdir afl-testcases
+RUN cp *.o afl-testcases
+ENV INPUTS=/opt/sched-fuzz/afl-testcases
+
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl @@
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

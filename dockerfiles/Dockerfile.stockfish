@@ -1,0 +1,37 @@
+FROM schedfuzz-base
+
+WORKDIR /opt
+RUN git clone https://github.com/official-stockfish/Stockfish.git
+
+WORKDIR /opt/Stockfish/src
+RUN make -j $(nproc) build ARCH=x86-64-modern
+ENV SUT_NAME=stockfish
+ENV UNINST=/opt/Stockfish/src/$SUT_NAME
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+# run (target specific)
+
+# No input for now
+CMD ./fuzz.sh -i test -o /opt/out -d -t 8000 -- timeout 5s ./$SUT_NAME.afl go
+# CMD ./fuzz.sh -i test -o /opt/out -d -t 8000 -- timeout 5s ./$SUT_NAME.afl bench
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

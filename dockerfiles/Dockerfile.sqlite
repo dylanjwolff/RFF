@@ -1,0 +1,49 @@
+FROM schedfuzz-base
+
+RUN apt install -y tclsh libz-dev
+
+WORKDIR /opt
+RUN git clone https://github.com/sqlite/sqlite.git
+WORKDIR /opt/sqlite
+ENV CFLAGS="-g -DSQLITE_THREADSAFE=1"
+ENV CXXFLAGS="-g -DSQLITE_THREADSAFE=1"
+RUN ./configure --disable-shared
+ENV SUT_NAME=threadtest5
+
+RUN make -j $(nproc) $SUT_NAME 
+ENV UNINST=/opt/sqlite/$SUT_NAME
+RUN wget https://raw.githubusercontent.com/google/fuzzbench/master/benchmarks/sqlite3_ossfuzz/ossfuzz.dict
+ENV DICT=/opt/sqlite/ossfuzz.dict
+
+ENV INPUTS=/opt/sqlite/test
+ENV PROJ_NAME=sqlite3
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+RUN cd $INPUTS; find ./ -size +10k -type f | xargs rm
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+# run (target specific)
+
+ENV ARGS=" "
+# only takes 1st arg, so i.e. a random input
+# RUN python3 ./dynamic-pp.py $INPUTS/*
+# COPY out.csv /opt/out
+
+RUN cp threading_events/$PROJ_NAME/$SUT_NAME/out.csv .
+RUN ./selective-instrument.sh $UNINST out.csv
+
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000+ -x $DICT -- ./$SUT_NAME.afl
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

@@ -1,0 +1,46 @@
+FROM schedfuzz-base
+
+WORKDIR /opt
+RUN mkdir svcomp
+WORKDIR /opt/svcomp
+RUN wget https://gitlab.com/sosy-lab/benchmarking/sv-benchmarks/-/raw/main/c/pthread/reorder_2.c
+RUN wget https://gitlab.com/sosy-lab/benchmarking/sv-benchmarks/-/raw/main/c/pthread/reorder_5.c
+RUN wget https://gitlab.com/sosy-lab/benchmarking/sv-benchmarks/-/raw/main/c/pthread/twostage_3.c
+RUN gcc -pthread reorder_2.c -o reorder_2
+RUN gcc -pthread reorder_5.c -o reorder_5
+RUN gcc -pthread twostage_3.c -o twostage_3
+
+# ENV SUT_NAME=reorder_5
+# ENV SUT_NAME=reorder_2
+ENV SUT_NAME=twostage_3
+ENV UNINST=/opt/svcomp/$SUT_NAME
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+ENV LOG_DIR_MAP=/opt/out/trace_map.std
+
+WORKDIR /opt
+RUN mkdir afl-testcases; echo "1" > afl-testcases/test.txt
+ENV INPUTS=/opt/afl-testcases
+
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+# Fix second input for now. Note that all three programs take in two numerical inputs
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl 1
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

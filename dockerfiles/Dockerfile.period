@@ -1,0 +1,58 @@
+FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak
+# RUN sed -i s:/archive.ubuntu.com:/mirrors.tuna.tsinghua.edu.cn/ubuntu:g /etc/apt/sources.list
+RUN apt-get clean
+RUN apt-get update --fix-missing -y
+RUN apt-get upgrade -y
+RUN apt-get install -y wget git build-essential apt-utils python3 python python3-pip tmux cmake libtool libtool-bin automake autoconf autotools-dev m4 autopoint libboost-dev help2man gnulib bison flex texinfo zlib1g-dev libexpat1-dev libfreetype6 libfreetype6-dev libbz2-dev liblzo2-dev libtinfo-dev libssl-dev pkg-config libswscale-dev libarchive-dev liblzma-dev liblz4-dev doxygen vim intltool gcc-multilib sudo --fix-missing
+
+RUN mkdir -p /workdir/PERIOD
+
+WORKDIR /workdir/PERIOD
+RUN git clone https://github.com/wcventure/PERIOD /workdir/PERIOD
+
+ENV PATH "/workdir/PERIOD/clang+llvm/bin:$PATH"
+ENV LD_LIBRARY_PATH "/workdir/PERIOD/clang+llvm/lib:$LD_LIBRARY_PATH"
+ENV ROOT_DIR "/workdir/PERIOD"
+
+RUN rm -r /workdir/PERIOD/tool/wllvm
+# RUN git clone https://github.com/travitch/whole-program-llvm.git /workdir/PERIOD/tool/wllvm/
+# RUN pip3 install /workdir/PERIOD/tool/wllvm/
+RUN pip3 install wllvm
+
+
+RUN sudo pip install numpy
+RUN sudo pip3 install numpy
+RUN sudo pip3 install sysv_ipc
+
+RUN mkdir /usr/local/share/aclocal/
+RUN cp -rf /usr/share/aclocal/* /usr/local/share/aclocal/
+
+RUN apt install libtinfo5
+
+RUN tool/install_llvm.sh
+RUN tool/install_SVF.sh
+RUN tool/install_staticAnalysis.sh
+
+ENV LLVM_COMPILER=clang
+# Our scripts
+COPY scripts/period/build.py build.py
+RUN python3 build.py
+
+FROM schedfuzz-base
+ENV PATH "/workdir/PERIOD/clang+llvm/bin:$PATH"
+ENV LD_LIBRARY_PATH "/workdir/PERIOD/clang+llvm/lib:$LD_LIBRARY_PATH"
+ENV ROOT_DIR "/workdir/PERIOD"
+
+COPY --from=0 /workdir /workdir
+WORKDIR /opt/sched-fuzz
+COPY scripts/period/one.py one.py
+RUN cp /workdir/PERIOD/sctbench_subject_config.json /opt/sched-fuzz
+RUN apt install python3-pip -y
+RUN pip3 install -r line2addr/requirements.txt
+COPY scripts/period/get-offsets-from-mempairs.py get-offsets-from-mempairs.py
+
+CMD python3 one.py
+

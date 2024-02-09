@@ -1,0 +1,42 @@
+To preprocess trace:
+
+python fuzz_preprocess.py [path to trace.std] [path to trace_map.std] [path to processed trace]
+
+Example: read trace.std and trace_map.std as input, write processed trace to trace_processed.std
+
+python fuzz_preprocess.py ./trace.std ./trace_map.std ./trace_processed.std
+
+
+
+===================================================================
+
+To run race predictor:
+
+java -cp "[path to rapid.jar]:[path to lib]" Main -h        to see instructions on how to run it
+
+
+====================================================================
+
+[score pattern]:
+
+max : takes the max score for each write/read pair
+
+min : takes the min score for each write/read pair
+
+avg : takes the average score for each write/read pair
+
+
+
+
+
+[vc diff pattern]: given the vectorclock of write/read pair, how to compute their differences
+
+absSum: takes the abs sum of every dimension in the vectorclock
+
+sum : takes the sum, then return its abs value
+
+absMax : takes the abs max
+
+avg : takes the average differences
+
+

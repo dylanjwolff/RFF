@@ -1,0 +1,78 @@
+FROM schedfuzz-base
+
+<<<<<<< Updated upstream
+# x264 specifics -- should split into separate file
+WORKDIR /opt
+RUN apt install -y gettext git groff autopoint texinfo
+RUN git clone https://github.com/dylanjwolff/nano.git
+WORKDIR /opt/nano
+RUN git checkout env-thread
+RUN ./autogen.sh --help
+RUN CFLAGS=-pthread ./configure
+RUN CFLAGS=-pthread make -j $(nproc)
+ENV UNINST=/opt/nano/src/nano
+
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+ENV LOG_DIR_MAP=/opt/out/trace_map.std
+
+ENV INPUTS=/opt/nano/afl_testcases/
+
+ENV SUT_NAME=nano
+
+#----------------- 
+=======
+RUN git clone https://github.com/madnight/nano.git
+WORKDIR /opt/libvpx
+ENV CFLAGS=-g
+ENV CXXFLAGS=-g
+RUN ./autogen.sh
+RUN ./configure --disable-shared
+RUN make
+# ENV SUT_NAME=vpxdec
+ENV SUT_NAME=nano
+ENV PROJ_NAME=nano
+
+ENV UNINST=/opt/nano/src/$SUT_NAME
+
+COPY seeds/avi /opt/afl-testcases
+ENV INPUTS=/opt/afl-testcases
+
+>>>>>>> Stashed changes
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+<<<<<<< Updated upstream
+## run (target specific)
+
+# nano
+## CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 8000 -- ./$SUT_NAME.afl @@ --input-res 640x360 --fps 30 -o -
+=======
+ENV ARGS=" @@"
+# only takes 1st arg, so i.e. a random input
+# RUN python3 ./dynamic-pp.py $INPUTS/*
+# COPY out.csv /opt/out
+
+# RUN cp threading_events/$PROJ_NAME/$SUT_NAME/out.csv .
+# RUN ./selective-instrument.sh $UNINST out.csv
+
+# run (target specific)
+
+# encode
+CMD ./fuzz.sh -i $INPUTS -o /opt/out -d -t 68000 -- ./$SUT_NAME.afl @@ $ARGS
+
+>>>>>>> Stashed changes
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

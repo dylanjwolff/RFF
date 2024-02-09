@@ -1,0 +1,21 @@
+FROM schedfuzz-base
+
+# build / install target
+WORKDIR /opt/sched-fuzz
+RUN cd test; make
+ENV UNINST=/opt/sched-fuzz/test/sum
+ENV SUT_NAME=sum
+ENV INPUTS=/opt/sched-fuzz/input
+
+# e9afl instrument
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+ENV MASK=0x3
+
+# run (target specific)
+RUN echo "ajdsfljaldskmfalsd932i413u4jalkflakjdfakfdsj" > sched.txt
+CMD ./run.sh sched.txt -- ./sum.afl input/tmp.o; ./run.sh sched.txt -- ./sum.afl input/tmp.o
+
+# docker run -t -v $(pwd)/out:/opt/out fuzz-sum
+# docker run -it -v $(pwd)/out:/opt/out fuzz-sum /bin/bash
+

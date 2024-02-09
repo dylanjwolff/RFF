@@ -1,0 +1,60 @@
+benchmark,PERIOD (reported),GenMC
+CB/aget-bug2,9,Error
+CB/pbzip2-0.9.4,41,Error
+CB/stringbuffer-jdk1.4,12,Error
+CS/account,2,5 / 0.02s
+CS/bluetooth_driver,9,10 / 0.04s
+CS/carter01,5,No error 4 / 0.02s
+CS/circular_buffer,17,8 / 0.02s
+CS/deadlock01,3,No error 3 / 0.02s
+CS/lazy01,3,1 / 0.02s
+CS/queue,25,22 / 0.02s
+CS/reorder_10,27,Error
+CS/reorder_100,,Error
+CS/reorder_20,39,Error
+CS/reorder_3,6,Error
+CS/reorder_4,9,Error
+CS/reorder_5,12,Error
+CS/reorder_50,,
+CS/stack,2,20 / 0.02s
+CS/token_ring,4,14 / 0.02s
+CS/twostage,3, 3 / 0.02s
+CS/twostage_100,690,Error
+CS/twostage_20,,
+CS/twostage_50,,
+CS/wronglock,10,3 / 0.02s
+CS/wronglock_3,6,Error
+Chess/InterlockedWorkStealQueue,105,Error
+Chess/InterlockedWorkStealQueueWithState,108,Error
+Chess/StateWorkStealQueue,1628,Error
+Chess/WorkStealQueue,1661,Error
+ConVul-CVE-Benchmarks/CVE-2009-3547,2,
+ConVul-CVE-Benchmarks/CVE-2011-2183,3,
+ConVul-CVE-Benchmarks/CVE-2013-1792,13,
+ConVul-CVE-Benchmarks/CVE-2015-7550,3,
+ConVul-CVE-Benchmarks/CVE-2016-1972,,
+ConVul-CVE-Benchmarks/CVE-2016-1973,5,
+ConVul-CVE-Benchmarks/CVE-2016-7911,3,
+ConVul-CVE-Benchmarks/CVE-2016-9806,6,
+ConVul-CVE-Benchmarks/CVE-2017-15265,11,
+ConVul-CVE-Benchmarks/CVE-2017-6346,5,
+Inspect_benchmarks/bbuf,,Error
+Inspect_benchmarks/boundedBuffer,20,Error
+Inspect_benchmarks/ctrace-test,,1 / 0.07s
+Inspect_benchmarks/qsort_mt,27,Error
+NEW/bzip2smp,,
+NEW/lbzip2,,
+NEW/lrzip,,No IR file
+NEW/pbzip2-1.0.5,,
+NEW/pixz-1.0.5,,
+NEW/pixz-1.0.7,,
+NEW/xz,,
+SafeStack,,Error
+Splash2/barnes,2,
+Splash2/fft,2,
+Splash2/lu,2,
+RADBench.bug2,"1,985",Error  jsapi.h not found
+RADBench.bug3,42,Error  jsapi.h not found
+RADBench.bug4,259,Error  nspr.h not found
+RADBench.bug5,,Error  nspr.h not found
+RADBench.bug6,24,Error  nspr.h not found

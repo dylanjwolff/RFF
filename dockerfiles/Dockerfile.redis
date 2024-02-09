@@ -1,0 +1,38 @@
+FROM schedfuzz-base
+
+WORKDIR /opt
+RUN git clone https://github.com/redis/redis.git
+
+WORKDIR /opt/redis
+RUN make -j $(nproc)
+ENV SUT_NAME=redis-benchmark
+# ENV SUT_NAME=redis-cli
+# ENV SUT_NAME=redis-server
+ENV UNINST=/opt/redis/src/$SUT_NAME
+ENV TO_LOG=true
+ENV LOG_DIR=/opt/out/trace.std
+# Steps to run
+# ------------
+
+# e9afl instrument
+
+WORKDIR /opt/sched-fuzz
+RUN ./instrument.sh $UNINST
+
+ENV MASK=0x3FF
+ENV DET_COV=1
+
+# run (target specific)
+COPY scripts/redis/redis.sh redis.sh
+
+# No input for now
+CMD ./redis.sh
+
+# remove sudo for privileged docker container
+# sudo sysctl -w kernel.core_pattern="core-%e"
+# cd /sys/devices/system/cpu; echo performance | sudo tee cpu*/cpufreq/scaling_governor
+
+# docker build . -t fuzzer
+# mkdir out
+# docker run -v $(pwd)/out:/opt/run fuzzer
+

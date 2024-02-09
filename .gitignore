@@ -1,0 +1,11 @@
+.vscode
+tags
+mempair.*.npz
+tags.lock
+*.so
+*.264
+*.o
+*.a
+*.tar.gz
+venv
+assets
