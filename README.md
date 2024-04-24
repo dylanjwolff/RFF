@@ -1,5 +1,28 @@
 # Reads-From Fuzzer (RFF)
 
+Reads-From Fuzzer (RFF) is a tool for concurrency testing. See our [paper](https://dylanjwolff.com/assets/asplos24.pdf) from ASPLOS 2024 for details!
+
+If you use our work for academic research, please cite our paper:
+
+```
+@inproceedings{10.1145/3620665.3640389,
+author = {Wolff, Dylan and Shi, Zheng and Duck, Gregory J. and Mathur, Umang and Roychoudhury, Abhik},
+title = {Greybox Fuzzing for Concurrency Testing},
+year = {2024},
+isbn = {9798400703850},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3620665.3640389},
+doi = {10.1145/3620665.3640389},
+booktitle = {Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 2},
+pages = {482–498},
+numpages = {17},
+location = {<conf-loc>, <city>La Jolla</city>, <state>CA</state>, <country>USA</country>, </conf-loc>},
+series = {ASPLOS '24}
+}
+```
+
+
 **Please note that all scripts should be run from the base directory of the repo, as they may contain relative paths**
 
 ## Dependencies
