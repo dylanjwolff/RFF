@@ -1,4 +1,4 @@
-# Concurrency Fuzzing
+# Reads-From Fuzzer (RFF)
 
 **Please note that all scripts should be run from the base directory of the repo, as they may contain relative paths**
 
