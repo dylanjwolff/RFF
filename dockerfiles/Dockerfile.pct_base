@@ -18,7 +18,7 @@ RUN java --version
 WORKDIR /opt
 # install zig
 ENV ZIG_DIR=zig-linux-x86_64-0.11.0
-RUN wget https://ziglang.org/builds/$ZIG_DIR.tar.xz
+RUN wget https://ziglang.org/download/0.11.0/$ZIG_DIR.tar.xz
 RUN tar -xvf zig-linux*
 ENV PATH=$PATH:/opt/$ZIG_DIR
 RUN zig zen
