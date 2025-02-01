@@ -1,3 +1,4 @@
 FROM schedfuzz-base
 ENV ROOT_DIR "/workdir/RaceBenchData"
 COPY --from=zhaohuanqdcn/racebench-rr /workdir /workdir
+COPY scripts/racebenchdata/fuzz.sh .
